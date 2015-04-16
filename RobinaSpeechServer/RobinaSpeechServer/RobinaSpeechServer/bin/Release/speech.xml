@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Options>
+  <Network>
+    <SelfAddress value="127.0.0.1"/>
+    <HostAddress value="127.0.0.1"/>
+    <RPCPort value="9595"/>
+    <MessagePassingPort value="9779"/>
+  </Network>
+  <Grammar path="D:\gen_gp\gp.xml" default="default"/>
+  <Recognition>
+    <IntialSilence value="0"/>
+    <EndSilence value="0"/>
+    <Confidence value="0"/>
+    <Sensor value="Shotgun"/>
+  </Recognition>
+  <TTS voice="Mary"/>
+</Options>
