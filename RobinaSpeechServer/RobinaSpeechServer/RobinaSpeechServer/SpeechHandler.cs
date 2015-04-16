@@ -16,6 +16,7 @@ namespace RobinaSpeechServer
     {
         public enum Microphone{Shotgun,Kinect};
         ConfigManager config = null;
+
         string GRAMMAR_PATH =Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)+"\\grammar.xml";
 
         string VOICE_NAME,HOST,SELF_ADDR;
@@ -162,7 +163,7 @@ namespace RobinaSpeechServer
             sre.RecognizeCompleted += sre_RecognizeCompleted;
             try
             {
-                doc = new SrgsDocument(GRAMMAR_PATH);
+                doc = new SrgsDocument(config[Scope.Grammar,"path"]);
 
 
                 Grammar g = new Grammar(doc, config[Scope.Grammar, "default"]);
