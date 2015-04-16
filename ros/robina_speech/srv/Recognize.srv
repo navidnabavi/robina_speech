@@ -1,0 +1,6 @@
+string scope
+string type
+string[] params
+bool verify
+---
+robina_speech/SpeechResult result
