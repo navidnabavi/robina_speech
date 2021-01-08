@@ -81,7 +81,92 @@ namespace RobinaSpeechServer
             }
 
         }
-         
+
+        private bool setupInput(){
+            switch (mic)
+            {
+                case Microphone.Kinect:
+                    try
+                    {
+                        setupKinect()
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("Error on Kinect");
+                        return false;
+                    }
+                case Microphone.Shotgun:
+                    try
+                    {
+                        if (!kinect)
+                        {
+                            setupMic()
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("No Microphone");
+                        return false;
+                    }
+            }
+            return true;
+        }
+        private void setupKinect(){
+            if (KinectSensor.KinectSensors.Count != 0)
+            {
+                if (configKinect())
+                {
+                    this.sre = new SpeechRecognitionEngine(GetSpeechRecognizer(true));
+
+
+                    this.sre.SetInputToAudioStream(source.Start(),
+                    new Microsoft.Speech.AudioFormat.SpeechAudioFormatInfo(
+                        Microsoft.Speech.AudioFormat.EncodingFormat.Pcm, 16000, 16, 1,
+                        32000, 2, null));
+                    this.kinect = true;
+                    Console.WriteLine("Kinect is active");
+                }
+            }
+            throw new System.Exception("Kinect not found");
+        }
+
+        private void setupMic(){
+            this.sre = new SpeechRecognitionEngine(GetSpeechRecognizer(false));
+            this.sre.SetInputToDefaultAudioDevice();
+            Console.WriteLine("Microphone is active");
+        }
+
+        private void setupCallbacks(){
+            sre.EmulateRecognizeCompleted += sre_EmulateRecognizeCompleted;
+            sre.LoadGrammarCompleted+=sre_LoadGrammarCompleted;
+            sre.SpeechDetected+=sre_SpeechDetected;
+            sre.SpeechHypothesized+=sre_SpeechHypothesized;
+            sre.SpeechRecognitionRejected+=sre_SpeechRecognitionRejected;
+            sre.SpeechRecognized +=sre_SpeechRecognized;
+            sre.RecognizeCompleted += sre_RecognizeCompleted;
+        }
+
+        private bool setupGrammar(){
+            try
+            {
+                doc = new SrgsDocument(config[Scope.Grammar,"path"]);
+                Grammar g = new Grammar(doc, config[Scope.Grammar, "default"]);
+                sre.LoadGrammar(g);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in parsing Grammar");
+                Console.WriteLine(ex.Message);
+                System.Threading.Thread.Sleep(1000);
+                return false;
+            }
+            foreach (Grammar a in sre.Grammars)
+            {
+                Console.WriteLine(a.RuleName);
+            }
+            return true;
+        }
+
         public void init()
         {
             configurate();
@@ -100,102 +185,28 @@ namespace RobinaSpeechServer
 
             mic = (Microphone)Enum.Parse(typeof(Microphone), config[Scope.Recognition, "Sensor"]);
             bool kinect = false;
+
             do
             {
-                switch (mic)
-                {
-                    case Microphone.Kinect:
-                        try
-                        {
-                            if (KinectSensor.KinectSensors.Count != 0)
-                            {
-                                if (configKinect())
-                                {
-                                    sre = new SpeechRecognitionEngine(GetSpeechRecognizer(true));
-
-
-                                    sre.SetInputToAudioStream(source.Start(),
-                                  new Microsoft.Speech.AudioFormat.SpeechAudioFormatInfo(
-                                      Microsoft.Speech.AudioFormat.EncodingFormat.Pcm, 16000, 16, 1,
-                                      32000, 2, null));
-                                    kinect = true;
-                                    Console.WriteLine("Kinect is active");
-                                }
-                            }
-                            break;
-                        }
-                        catch (Exception)
-                        {
-                            Console.WriteLine("Error on kinect");
-                            //mic = Microphone.Shotgun;
-
-                            continue;
-                        }
-                    case Microphone.Shotgun:
-                        try
-                        {
-                            if (!kinect)
-                            {
-                                Console.WriteLine("Microphone is active");
-                                sre = new SpeechRecognitionEngine(GetSpeechRecognizer(false));
-                                sre.SetInputToDefaultAudioDevice();
-                               
-                            }
-                        }
-                        catch (Exception)
-                        {
-                            Console.WriteLine("No Microphone");
-                            //mic = Microphone.Kinect;
-                            continue;
-                        }
-                        break;
+                if !setupInput() {
+                    continue;
                 }
-
-
-
-            sre.EmulateRecognizeCompleted += sre_EmulateRecognizeCompleted;
-
-            sre.LoadGrammarCompleted+=sre_LoadGrammarCompleted;
-            sre.SpeechDetected+=sre_SpeechDetected;
-            sre.SpeechHypothesized+=sre_SpeechHypothesized;
-            sre.SpeechRecognitionRejected+=sre_SpeechRecognitionRejected;
-            sre.SpeechRecognized +=sre_SpeechRecognized;
-            sre.RecognizeCompleted += sre_RecognizeCompleted;
-            try
-            {
-                doc = new SrgsDocument(config[Scope.Grammar,"path"]);
-
-
-                Grammar g = new Grammar(doc, config[Scope.Grammar, "default"]);
-
-                //Grammar g = new Grammar(GRAMMAR_PATH, "default");
-
-                sre.LoadGrammar(g);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in parsing Grammar");
-                Console.WriteLine(ex.Message);
-                System.Threading.Thread.Sleep(1000);
-                continue;
-            }
-            foreach (Grammar a in sre.Grammars)
-            {
-                Console.WriteLine(a.RuleName);
-            }
-            //sre.UpdateRecognizerSetting("ResourceUsage", 90);
-            try
-            {
-
-                sre.RecognizeAsync(RecognizeMode.Multiple);
-            }
-            catch (InvalidOperationException)
-            {
-                Console.WriteLine("Microhpone is down");
-                continue;
-            }
                 
-            break;
+                if !setupGrammar(){
+                    continue;
+                }
+                
+                try
+                {
+                    sre.RecognizeAsync(RecognizeMode.Multiple);
+                }
+                catch (InvalidOperationException)
+                {
+                    Console.WriteLine("Microhpone is down");
+                    continue;
+                }
+                    
+                break;
             } while (true);
             Console.WriteLine("Started!!");
         }
